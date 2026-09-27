@@ -3,6 +3,7 @@ import torch
 from torch.testing import assert_close
 
 from spd_learn.functional import dropout_spd
+from spd_learn.models import EEGSPDNet
 from spd_learn.modules import SPDDropout
 
 
@@ -52,3 +53,16 @@ def test_spddropout_module_behavior():
     layer.eval()
     out_eval = layer(x)
     assert_close(out_eval, x)
+
+
+def test_eegspdnet_respects_requested_spd_dropout_probability():
+    model = EEGSPDNet(n_chans=3, n_outputs=2, spd_drop_prob=0.15)
+    layers = [layer for layer in model.modules() if isinstance(layer, SPDDropout)]
+    assert len(layers) == 3
+    x = _make_spd_batch((4, 12, 12))
+    for layer in layers:
+        torch.manual_seed(42)
+        actual = layer(x)
+        torch.manual_seed(42)
+        expected = dropout_spd(x, p=0.15, epsilon=5e-4, use_scaling=True)
+        assert_close(actual, expected)

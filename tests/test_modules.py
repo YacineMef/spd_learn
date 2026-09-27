@@ -26,6 +26,25 @@ test_configs = [
 ]
 
 
+@pytest.mark.parametrize("in_features,out_features", [(6, 3), (3, 3), (3, 6)])
+def test_default_bimap_remains_orthogonal_after_adamw(in_features, out_features):
+    """Weight decay must not erase the orthogonal map's sign coordinates."""
+    torch.manual_seed(0)
+    layer = BiMap(in_features, out_features)
+    optimizer = torch.optim.AdamW(layer.parameters(), lr=1e-3, weight_decay=1e-4)
+    x = torch.randn(4, in_features, in_features)
+    x = x @ x.mT + 0.1 * torch.eye(in_features)
+    for _ in range(3):
+        optimizer.zero_grad()
+        layer(x).square().mean().backward()
+        optimizer.step()
+        q = layer.weight
+        assert_close(
+            q.mT @ q, torch.eye(out_features).unsqueeze(0), atol=1e-5, rtol=1e-5
+        )
+        assert torch.linalg.eigvalsh(layer(x)).min() > 0
+
+
 @pytest.fixture(scope="module")
 def device():
     """Fixture to provide the device (CPU or GPU if available)."""

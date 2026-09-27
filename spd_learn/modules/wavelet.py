@@ -180,33 +180,36 @@ class WaveletConv(nn.Module):
         )
         n_freqs = wavelets.shape[0]
 
-        X = X.to(dtype=self.dtype)
-
-        if X.dim() == 3:
-            batch_size, in_channels, times = X.shape
+        if X.dim() not in (3, 4):
+            raise ValueError(
+                f"Wavelet expects a 3D or 4D input, but received shape {tuple(X.shape)}"
+            )
+        if not X.is_complex() and wavelets.is_complex():
+            # Real EEG needs only the real and imaginary kernel responses.
+            # Preserve complex-kernel precision under real-valued autocast.
+            with torch.autocast(device_type=X.device.type, enabled=False):
+                responses = F.conv1d(
+                    X.to(wavelets.real.dtype).reshape(-1, 1, X.shape[-1]),
+                    torch.cat((wavelets.real, wavelets.imag)).unsqueeze(1),
+                    padding=self.padding,
+                    stride=self.stride,
+                )
+            X_conv = torch.complex(*responses.split(n_freqs, dim=1))
+        else:
             X_conv = F.conv1d(
-                X.to(self.dtype).view(-1, 1, times),
+                X.to(self.dtype).reshape(-1, 1, X.shape[-1]),
                 wavelets.unsqueeze(1),
                 padding=self.padding,
                 stride=self.stride,
             )
+        if X.dim() == 3:
+            batch_size, in_channels, _ = X.shape
             X_conv = X_conv.view(batch_size, in_channels, n_freqs, -1)
             X_conv = X_conv.swapaxes(1, 2)
-        elif X.dim() == 4:
-            batch_size, n_epochs, in_channels, times = X.shape
-            X_conv = F.conv1d(
-                X.to(self.dtype).view(batch_size * n_epochs * in_channels, 1, times),
-                wavelets.unsqueeze(1),
-                padding=self.padding,
-                stride=self.stride,
-            )
+        else:
+            batch_size, n_epochs, in_channels, _ = X.shape
             X_conv = X_conv.view(batch_size, n_epochs, in_channels, n_freqs, -1)
             X_conv = X_conv.permute(0, 3, 2, 1, 4).contiguous()
             n_batch, n_freqs, n_sensors, n_epochs, n_times = X_conv.shape
             X_conv = X_conv.view(n_batch, n_freqs, n_sensors, n_epochs * n_times)
-        else:
-            raise ValueError(
-                f"Wavelet expects a 3D or 4D input, but received shape {tuple(X.shape)}"
-            )
-
         return X_conv.to(device=X.device, dtype=self.dtype)
