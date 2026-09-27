@@ -151,7 +151,8 @@ class Green(nn.Module):
         self.spd_layers = nn.Sequential(*spd_layers_list)
 
         vectorized_dim = int(current_spd_dim * (current_spd_dim + 1) / 2)
-        proj = nn.Sequential(LogEig(upper=True, autograd=True))
+        # The spectral derivative stays finite at repeated eigenvalues.
+        proj = nn.Sequential(LogEig(upper=True, autograd=False))
 
         if logref == "logeuclid":
             proj.append(

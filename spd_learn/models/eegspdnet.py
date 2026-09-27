@@ -120,7 +120,7 @@ class EEGSPDNet(nn.Module):
 
             if dropout > 0:
                 layers[f"spd_dropout{i}"] = SPDDropout(
-                    epsilon=threshold, use_scaling=dropout_scaling
+                    p=dropout, epsilon=threshold, use_scaling=dropout_scaling
                 )
 
             layers[f"reeig{i}"] = ReEig(threshold=threshold)

@@ -5,6 +5,46 @@ All notable changes to SPD Learn will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-09-27
+
+### Fixed
+
+- EEGSPDNet now passes `spd_drop_prob` to each SPD dropout layer instead of
+  silently using the layer's default probability of 0.5.
+- Green uses the stable spectral matrix-log derivative, avoiding NaN gradients
+  at repeated eigenvalues.
+- BiMap defaults to the Cayley parametrization, preserving orthogonality during
+  AdamW updates with weight decay. Explicit Householder users should exclude
+  the parametrization's original parameter from weight decay.
+- Corrected `matrix_power` exponent gradients, including clamped eigenvalues
+  and Python scalar exponents.
+- Corrected Bures-Wasserstein geodesics, parallel transport, and ExpEig input
+  decoding and shape validation.
+- Fixed device mismatches in wavelet and covariance operations and their tests.
+
+### Performance
+
+- WaveletConv evaluates real inputs using a single real convolution over the
+  real and imaginary kernels. Complex inputs retain the complex convolution
+  path. Regression tests cover outputs and input, frequency, and bandwidth
+  gradients for both precisions, input layouts, padding, stride, and CPU autocast
+  settings. The real convolution preserves complex-kernel precision under autocast.
+- WaveletConv also accepts non-contiguous inputs without requiring callers to
+  make a contiguous copy.
+
+### Added
+
+- `SPDBatchNormLie` and functional Lie-group batch-normalization operations.
+- Source-free SPD domain-adaptation and batch-normalization examples.
+- Regression coverage for EEGSPDNet dropout, Green's matrix-log derivative,
+  and BiMap orthogonality after optimizer updates.
+
+### Dependencies
+
+- Require the released `pyriemann>=0.12` package for Array API support.
+- Require `moabb>=1.7.2` in the `brain` extra for pyRiemann mean compatibility.
+- Cap the test dependency at `pytest<9.1` for pytest-cases compatibility.
+
 ## [0.1.0] - 2026-02-05
 
 ### 🎉 Initial Release

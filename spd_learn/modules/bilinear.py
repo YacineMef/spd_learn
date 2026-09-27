@@ -67,6 +67,9 @@ class BiMap(nn.Module):
         matrix via projection/retraction on the Stiefel manifold.
     orthogonal_map : {"cayley", "matrix_exp", "householder"}, optional
         The method used for orthogonal parametrization. If `None`, defaults to "cayley".
+        When explicitly using ``"householder"``, exclude the parametrization's
+        original parameter from optimizer weight decay: decaying its fixed sign
+        coordinates can destroy orthogonality in PyTorch.
     init_method : {"kaiming_uniform", "orthogonal", "stiefel"}, default="kaiming_uniform"
         The initialization method for the weight matrix.
     seed : int, optional

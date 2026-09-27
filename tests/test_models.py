@@ -12,6 +12,18 @@ def test_green_model_initialization_and_forward():
     assert output.shape == (2, 2)
 
 
+@pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+@pytest.mark.parametrize("eigenvalue", [0.3, 1.0])
+def test_green_logeig_backward_at_repeated_eigenvalues(dtype, eigenvalue):
+    """Green must use the finite matrix-log derivative at isotropic covariance."""
+    model = Green(n_outputs=2, n_chans=3, n_freqs_init=2, dtype=dtype)
+    identity = torch.eye(3, dtype=dtype)
+    covariance = (eigenvalue * identity).expand(2, 2, 3, 3).clone().requires_grad_()
+    model.proj[0](covariance).sum().backward()
+    expected = (identity + (1 - identity) / 2**0.5) / eigenvalue
+    torch.testing.assert_close(covariance.grad, expected.expand_as(covariance))
+
+
 @pytest.mark.parametrize("random_f_init", [True, False])
 @pytest.mark.parametrize("shrinkage_init", [None, 0.0, 2.5])
 @pytest.mark.parametrize("logref", ["logeuclid", "identity"])
