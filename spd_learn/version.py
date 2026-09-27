@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Version information for spd_learn."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
